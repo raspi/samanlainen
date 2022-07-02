@@ -194,18 +194,29 @@ fn main() -> Result<(), io::Error> {
 
     let mut freed_space: u64 = 0;
     let mut freed_files: u64 = 0;
+    let mut files_remaining: u64 = file_count;
+    let mut space_remaining: u64 = total_size;
 
     // remove files in file size groups so that collision with different sized files are less likely
     for (fsize, files) in files_found {
+        if files.is_empty() {
+            continue
+        }
+
+        files_remaining -= files.len() as u64;
+        space_remaining -= fsize * (files.len() as u64);
+
         println!("(4 / 6) Hashing {} files with size {}...", files.len(), convert_to_human(fsize));
         let final_candidates = samanlainen::find_final_candidates(files)?;
 
         for (checksum, files) in final_candidates {
             if files.is_empty() {
+                println!("  There were no files");
                 continue;
             }
 
             if files.len() < args.count as usize {
+                println!("  There were too few files with same checksum ({})", files.len());
                 continue;
             }
 
@@ -230,7 +241,7 @@ fn main() -> Result<(), io::Error> {
             }
         }
 
-        println!("Currently removed {} files totaling {}", freed_files, convert_to_human(freed_space));
+        println!("Currently removed {} files totaling {}  Remaining: {} files, {}", freed_files, convert_to_human(freed_space), files_remaining, convert_to_human(space_remaining));
     }
 
 
