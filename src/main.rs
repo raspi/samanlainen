@@ -150,11 +150,11 @@ fn main() -> Result<(), io::Error> {
         println!("{}", convert_to_human(args.maxsize));
     }
 
-    println!("Scan size: {}", convert_to_human(args.scansize));
+    println!("Scan size for last and first bytes of files: {}", convert_to_human(args.scansize));
 
     println!("Directories to scan:");
     for dir in dirs_to_search.clone() {
-        println!("  {}", dir.display());
+        println!(" * {}", dir.display());
     }
 
     println!();
