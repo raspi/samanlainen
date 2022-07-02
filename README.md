@@ -1,5 +1,9 @@
 # samanlainen
 
+![GitHub All Releases](https://img.shields.io/github/downloads/raspi/samanlainen/total?style=for-the-badge)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/raspi/samanlainen?style=for-the-badge)
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/raspi/samanlainen?style=for-the-badge)
+
 Delete duplicate files. Uses SHA512. Rewritten from [duplikaatti](https://github.com/raspi/duplikaatti) (Go) in Rust.
 
 ## Example run
