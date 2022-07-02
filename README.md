@@ -1,2 +1,4 @@
 # samanlainen
-Delete duplicate files
+
+Delete duplicate files. Uses SHA512.
+
