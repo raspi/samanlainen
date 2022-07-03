@@ -238,6 +238,7 @@ fn hash_full(
     Ok(checksum_to_hex(hasher.finalize().as_slice()))
 }
 
+// Hashes files fully and returns file list and checksum as the key
 pub fn find_final_candidates(
     l: Vec<PathBuf>,     // List of files
 ) -> io::Result<HashMap<String, Vec<PathBuf>>> {
