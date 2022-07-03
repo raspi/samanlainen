@@ -26,7 +26,7 @@ pub fn eliminate_first_or_last_bytes_hash(
     t: ScanType, // Scan first or last bytes of file
     scansize: u64, // how many bytes to scan
     min_count: u64, // minimal count considered as duplicate (2 or more)
-) -> Result<HashMap<u64, Vec<PathBuf>>, io::Error> {
+) -> io::Result<HashMap<u64, Vec<PathBuf>>> {
     if min_count < 2 {
         panic!("count < 2")
     }
@@ -81,7 +81,7 @@ pub fn find_candidate_files(
     minimum_size: u64, // file size must be at least this
     maximum_size: u64, // file size cannot be larger than this, 0 disables max size
     count: u64, // there must be at least this many files with same file size to be considered a duplicate (must be 2 or more)
-) -> Result<HashMap<u64, Vec<PathBuf>>, io::Error> {
+) -> io::Result<HashMap<u64, Vec<PathBuf>>> {
     if count < 2 {
         panic!("count < 2")
     }
@@ -189,7 +189,7 @@ fn hash_partial(
     p: PathBuf, // File to scan
     t: ScanType, // Scan first or last bytes of file
     s: u64, // how many bytes to scan
-) -> Result<String, io::Error> {
+) -> io::Result<String> {
     if s == 0 {
         panic!("zero size")
     }
@@ -222,7 +222,7 @@ fn hash_partial(
 // Hash the entire file
 fn hash_full(
     p: PathBuf, // File to scan
-) -> Result<String, io::Error> {
+) -> io::Result<String> {
     let f = File::open(p)?;
 
     let mut buffer = [0u8; 1048576];
@@ -240,7 +240,7 @@ fn hash_full(
 
 pub fn find_final_candidates(
     l: Vec<PathBuf>,     // List of files
-) -> Result<HashMap<String, Vec<PathBuf>>, io::Error> {
+) -> io::Result<HashMap<String, Vec<PathBuf>>> {
     let mut res: HashMap<String, Vec<PathBuf>> = HashMap::new();
     let mut hashes: HashMap<String, Vec<PathBuf>> = HashMap::new();
 
@@ -274,7 +274,7 @@ pub fn find_final_candidates(
 
 
 #[test]
-fn test_integration() -> Result<(), io::Error> {
+fn test_integration() -> io::Result<()> {
     let mincount: u64 = 2;
     let scansize: u64 = 1048576;
 
