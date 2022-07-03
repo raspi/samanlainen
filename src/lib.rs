@@ -183,7 +183,7 @@ pub enum ScanType {
 }
 
 fn checksum_to_hex(bytes: &[u8]) -> String {
-    let mut s: String = "".to_string().to_owned();
+    let mut s: String = String::new();
 
     for b in bytes {
         s.push_str(format!("{:02x}", b).as_str());
