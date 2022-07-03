@@ -91,7 +91,7 @@ struct CLIArgs {
     paths: Vec<PathBuf>,
 }
 
-fn get_directories(dirs: Vec<PathBuf>) -> Result<Vec<PathBuf>, io::Error> {
+fn get_directories(dirs: Vec<PathBuf>) -> io::Result<Vec<PathBuf>> {
     let mut found_dirs: Vec<PathBuf> = Vec::new(); // for possible duplicates
     let mut dirs_to_search: Vec<PathBuf> = Vec::new();
 
