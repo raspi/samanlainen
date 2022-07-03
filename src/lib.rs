@@ -2,7 +2,7 @@ use std::{io, iter};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 
 use sha2::{Digest, Sha512};
 use walkdir::{DirEntryExt, WalkDir};
