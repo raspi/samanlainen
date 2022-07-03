@@ -146,6 +146,7 @@ pub fn find_candidate_files(
         }
     }
 
+    // Filter out file groups which has too few files
     let mut files: HashMap<u64, Vec<PathBuf>> = HashMap::new();
 
     for (k, v) in sizes {
@@ -154,7 +155,7 @@ pub fn find_candidate_files(
         }
 
         if v.len() < count as usize {
-            // Remove
+            // Too few files to be considered duplicate
             continue;
         }
 
@@ -246,12 +247,15 @@ pub fn find_final_candidates(
     for file in l {
         let checksum = hash_full(file.to_owned())?;
 
+
         hashes
             .entry(checksum)
             .or_default()
             .push(file);
     }
 
+
+    // Filter out file groups which has too few files
     for (checksum, files) in hashes {
         if files.is_empty() {
             continue;
