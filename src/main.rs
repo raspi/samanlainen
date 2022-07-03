@@ -33,7 +33,7 @@ fn convert_to_human(bytes: u64) -> String {
 fn convert_bytes(bytes: u64, conv: ConvertTo) -> String {
     let num: f64 = bytes as f64;
 
-    let units = match conv.clone() {
+    let units = match conv {
         ConvertTo::SI => ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"],
         ConvertTo::IEC => ["B", "kiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"],
     };
@@ -42,7 +42,7 @@ fn convert_bytes(bytes: u64, conv: ConvertTo) -> String {
         return format!("{} {}", num, units[0]);
     }
 
-    let delimiter = match conv.clone() {
+    let delimiter = match conv {
         ConvertTo::SI => 1000_f64,
         ConvertTo::IEC => 1024_f64,
     };
