@@ -283,8 +283,8 @@ pub fn find_final_candidates(
 
 #[test]
 fn test_integration() -> Result<(), io::Error> {
-    let mincount:u64 = 2;
-    let scansize:u64 = 1048576;
+    let mincount: u64 = 2;
+    let scansize: u64 = 1048576;
 
     let mut paths: Vec<PathBuf> = Vec::new();
     paths.push(Path::new("test").to_path_buf());
