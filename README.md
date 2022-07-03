@@ -6,6 +6,31 @@
 
 Delete duplicate files. Uses SHA512. Rewritten from [duplikaatti](https://github.com/raspi/duplikaatti) (Go) in Rust.
 
+## Usage
+
+```
+samanlainen 0.1.0
+Pekka Järvinen
+Delete duplicate files. Uses SHA512.
+
+USAGE:
+    samanlainen [OPTIONS] <PATHS>...
+
+ARGS:
+    <PATHS>...    Path(s) to scan for duplicate files
+
+OPTIONS:
+    -c, --count <COUNT>          Minimum count of files considered duplicate (min. 2) [default: 2]
+        --delete-files           Delete files? If enabled, files are actually deleted
+    -h, --help                   Print help information
+    -m, --minsize <MINSIZE>      Minimum filesize to scan [default: 1]
+    -M, --maxsize <MAXSIZE>      Maximum filesize to scan (0 = no limit) [default: 0]
+    -s, --scansize <SCANSIZE>    Scan size used for scanning first and last bytes of file [default:
+                                 1048576]
+    -v, --verbose                Be verbose, -vvv... be very verbose
+    -V, --version                Print version information
+```
+
 ## Example run
 
 ```shell
