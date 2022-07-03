@@ -49,11 +49,8 @@ pub fn eliminate_first_or_last_bytes_hash(
 
             hashes
                 .entry(checksum)
-                .and_modify(|ent|
-                    ent.push(file.to_owned())
-                ).or_insert(
-                vec!(file.to_owned())
-            );
+                .or_default()
+                .push(file);
         }
 
         for (checksum, filelist) in hashes {
@@ -69,11 +66,8 @@ pub fn eliminate_first_or_last_bytes_hash(
             for fpath in filelist {
                 newl
                     .entry(fsize)
-                    .and_modify(|entries|
-                        entries.push(fpath.to_owned())
-                    ).or_insert(
-                    vec!(fpath.to_owned())
-                );
+                    .or_default()
+                    .push(fpath);
             }
         }
     }
@@ -147,11 +141,8 @@ pub fn find_candidate_files(
 
             sizes
                 .entry(m.len())
-                .and_modify(|ent|
-                    ent.push(e.to_owned().into_path())
-                ).or_insert(
-                vec!(e.to_owned().into_path())
-            );
+                .or_default()
+                .push(e.into_path());
         }
     }
 
@@ -257,11 +248,8 @@ pub fn find_final_candidates(
 
         hashes
             .entry(checksum)
-            .and_modify(|ent|
-                ent.push(file.to_owned())
-            ).or_insert(
-            vec!(file.to_owned())
-        );
+            .or_default()
+            .push(file);
     }
 
     for (checksum, files) in hashes {
