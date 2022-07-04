@@ -7,10 +7,7 @@ use std::process::exit;
 
 use clap::{App, Arg, ArgAction};
 use clap::Parser;
-
-use samanlainen::ScanType;
-
-mod lib;
+use samanlainen_lib::{ScanType, find_final_candidates, eliminate_first_or_last_bytes_hash, generate_stats, find_candidate_files};
 
 #[derive(Clone, Copy)]
 enum ConvertTo {
@@ -161,8 +158,8 @@ fn main() -> Result<(), io::Error> {
 
     println!("(1 / 6) Generating file list based on file sizes...");
 
-    let mut files_found: HashMap<u64, Vec<PathBuf>> = samanlainen::find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count)?;
-    let (file_count, total_size) = samanlainen::generate_stats(files_found.to_owned());
+    let mut files_found: HashMap<u64, Vec<PathBuf>> = find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count)?;
+    let (file_count, total_size) = generate_stats(files_found.to_owned());
     println!("  File candidates: {} Total size: {}", file_count, convert_to_human(total_size));
     if files_found.is_empty() {
         println!("No files.");
@@ -172,8 +169,8 @@ fn main() -> Result<(), io::Error> {
 
     // Scan last bytes
     println!("(2 / 6) Eliminating candidates based on last {} bytes of files...", args.scansize);
-    files_found = samanlainen::eliminate_first_or_last_bytes_hash(files_found.to_owned(), ScanType::Last, args.scansize, args.count)?;
-    let (file_count, total_size) = samanlainen::generate_stats(files_found.to_owned());
+    files_found = eliminate_first_or_last_bytes_hash(files_found.to_owned(), ScanType::Last, args.scansize, args.count)?;
+    let (file_count, total_size) = generate_stats(files_found.to_owned());
     println!("  File candidates: {} Total size: {}", file_count, convert_to_human(total_size));
     if files_found.is_empty() {
         println!("No files.");
@@ -183,8 +180,8 @@ fn main() -> Result<(), io::Error> {
 
     // Scan first bytes
     println!("(3 / 6) Eliminating candidates based on first {} bytes of files...", args.scansize);
-    files_found = samanlainen::eliminate_first_or_last_bytes_hash(files_found.to_owned(), ScanType::First, args.scansize, args.count)?;
-    let (file_count, total_size) = samanlainen::generate_stats(files_found.to_owned());
+    files_found = eliminate_first_or_last_bytes_hash(files_found.to_owned(), ScanType::First, args.scansize, args.count)?;
+    let (file_count, total_size) = generate_stats(files_found.to_owned());
     println!("  File candidates: {} Total size: {}", file_count, convert_to_human(total_size));
     if files_found.is_empty() {
         println!("No files.");
@@ -207,7 +204,7 @@ fn main() -> Result<(), io::Error> {
         space_remaining -= fsize * (files.len() as u64);
 
         println!("(4 / 6) Hashing {} files with size {}...", files.len(), convert_to_human(fsize));
-        let final_candidates = samanlainen::find_final_candidates(files)?;
+        let final_candidates = find_final_candidates(files)?;
 
         for (checksum, files) in final_candidates {
             if files.is_empty() {

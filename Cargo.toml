@@ -12,3 +12,11 @@ description = "Delete duplicate files. Uses SHA512."
 walkdir = "2"
 clap = { version = "3.2.8", features = ["derive"] }
 sha2 = "0.10.2"
+
+[lib]
+name = "samanlainen_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "samanlainen"
+path = "src/bin/samanlainen.rs"
