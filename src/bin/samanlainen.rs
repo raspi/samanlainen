@@ -67,31 +67,40 @@ fn convert_bytes(bytes: u64, conv: ConvertTo) -> String {
     format!("{} {}", pretty_bytes, units[exponent as usize])
 }
 
-fn parse_min_bytes(s: &str) -> Result<u64, Error> {
-    let min = parse_size(s).expect("could not parse");
+fn parse_min_bytes(s: &str) -> Result<u64, String> {
+    let min = match parse_size(s) {
+        Ok(r) => r,
+        Err(ref e) => return Err(e.to_string())
+    };
 
     if min < 1 {
-        panic!("minimum is 1 for minimum size");
+        return Err("minimum is 1 for minimum size".to_string());
     }
 
     Ok(min)
 }
 
-fn parse_max_bytes(s: &str) -> Result<u64, Error> {
-    let max = parse_size(s).expect("could not parse");
+fn parse_max_bytes(s: &str) -> Result<u64, String> {
+    let max = match parse_size(s) {
+        Ok(r) => r,
+        Err(ref e) => return Err(e.to_string())
+    };
 
     if max < 1 {
-        panic!("minimum is 1 for maximum size");
+        return Err("minimum is 1 for maximum size".to_string());
     }
 
     Ok(max)
 }
 
-fn parse_scansize_bytes(s: &str) -> Result<u64, Error> {
-    let ss = parse_size(s).expect("could not parse");
+fn parse_scansize_bytes(s: &str) -> Result<u64, String> {
+    let ss = match parse_size(s) {
+        Ok(r) => r,
+        Err(ref e) => return Err(e.to_string())
+    };
 
     if ss < 1 {
-        panic!("minimum is 1 for scan size");
+        return Err("minimum is 1 for scan size".to_string());
     }
 
     Ok(ss)
@@ -103,10 +112,10 @@ fn parse_scansize_bytes(s: &str) -> Result<u64, Error> {
 #[clap(author, version, about, long_about = None)]
 struct CLIArgs {
     #[clap(
-        short = 'v',
-        long,
-        parse(from_occurrences),
-        help = "Be verbose, -vvv... be very verbose"
+    short = 'v',
+    long,
+    parse(from_occurrences),
+    help = "Be verbose, -vvv... be very verbose"
     )]
     verbose: u64,
 
@@ -134,29 +143,32 @@ struct CLIArgs {
     delete_files: bool,
 
     #[clap(
-        short = 'S',
-        long,
-        value_enum,
-        help = "Sort order",
-        default_value = "i-node"
+    short = 'S',
+    long,
+    value_enum,
+    help = "Sort order",
+    default_value = "i-node"
     )]
     sort_order: DirSortOrder,
 
     #[clap(
-        required = true,
-        multiple = true,
-        help = "Path(s) to scan for duplicate files"
+    required = true,
+    multiple = true,
+    help = "Path(s) to scan for duplicate files"
     )]
     paths: Vec<PathBuf>,
 }
 
-fn get_directories(dirs: Vec<PathBuf>) -> io::Result<Vec<PathBuf>> {
+fn get_directories(dirs: Vec<PathBuf>) -> Result<Vec<PathBuf>, String> {
     let mut found_dirs: Vec<PathBuf> = Vec::new(); // for possible duplicates
     let mut dirs_to_search: Vec<PathBuf> = Vec::new();
 
     for dir in dirs {
         // Convert to absolute path
-        let path = canonicalize(Path::new(&dir))?;
+        let path = match canonicalize(Path::new(&dir)) {
+            Ok(r) => r,
+            Err(e) => return Err(format!("{}", e).to_string())
+        };
 
         if found_dirs.contains(&path.to_path_buf()) {
             continue;
@@ -166,7 +178,7 @@ fn get_directories(dirs: Vec<PathBuf>) -> io::Result<Vec<PathBuf>> {
             found_dirs.push(path.to_path_buf());
             dirs_to_search.push(path.to_owned());
         } else {
-            panic!("ERROR: Not a directory: {}", path.display());
+            return Err(format!("ERROR: Not a directory: {}", path.display()));
         }
     }
 
@@ -205,7 +217,13 @@ fn main() -> Result<(), io::Error> {
         exit(1);
     }
 
-    let dirs_to_search: Vec<PathBuf> = get_directories(args.paths)?;
+    let dirs_to_search: Vec<PathBuf> = match get_directories(args.paths) {
+        Ok(l) => l,
+        Err(e) => {
+            println!("could not parse paths: {}", e);
+            exit(1);
+        }
+    };
 
     if dirs_to_search.is_empty() {
         println!("No directories");
