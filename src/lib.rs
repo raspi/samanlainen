@@ -126,7 +126,7 @@ pub fn find_candidate_files(
                 continue;
             }
 
-            if maximum_size != 0 && m.len() > maximum_size {
+            if m.len() > maximum_size {
                 // Too large file
                 continue;
             }
