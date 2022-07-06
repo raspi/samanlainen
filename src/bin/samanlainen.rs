@@ -1,6 +1,6 @@
-use std::{cmp, io, iter};
+use std::{cmp, io};
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::fmt::Error;
 use std::fs::{canonicalize, remove_file};
 use std::path::{Path, PathBuf};
@@ -9,8 +9,13 @@ use std::str::FromStr;
 
 use clap::{App, Arg, ArgAction};
 use clap::Parser;
+use parse_size::parse_size;
 use walkdir::{DirEntry, DirEntryExt};
-use samanlainen_lib::{ScanType, find_final_candidates, eliminate_first_or_last_bytes_hash, generate_stats, find_candidate_files};
+
+use samanlainen_lib::{
+    eliminate_first_or_last_bytes_hash, find_candidate_files, find_final_candidates,
+    generate_stats, ScanType,
+};
 
 #[derive(Clone, Copy)]
 enum ConvertTo {
@@ -25,9 +30,12 @@ fn convert_to_human(bytes: u64) -> String {
         return format!("{} B", bytes);
     }
 
-    format!("{} B ({}, {})", bytes,
-            convert_bytes(bytes, ConvertTo::SI),
-            convert_bytes(bytes, ConvertTo::IEC))
+    format!(
+        "{} B ({}, {})",
+        bytes,
+        convert_bytes(bytes, ConvertTo::SI),
+        convert_bytes(bytes, ConvertTo::IEC)
+    )
 }
 
 fn convert_bytes(bytes: u64, conv: ConvertTo) -> String {
@@ -52,8 +60,41 @@ fn convert_bytes(bytes: u64, conv: ConvertTo) -> String {
         (units.len() - 1) as i32,
     );
 
-    let pretty_bytes = format!("{:.2}", num / delimiter.powi(exponent)).parse::<f64>().unwrap() * 1_f64;
+    let pretty_bytes = format!("{:.2}", num / delimiter.powi(exponent))
+        .parse::<f64>()
+        .unwrap()
+        * 1_f64;
     format!("{} {}", pretty_bytes, units[exponent as usize])
+}
+
+fn parse_min_bytes(s: &str) -> Result<u64, Error> {
+    let min = parse_size(s).expect("could not parse");
+
+    if min < 1 {
+        panic!("minimum is 1 for minimum size");
+    }
+
+    Ok(min)
+}
+
+fn parse_max_bytes(s: &str) -> Result<u64, Error> {
+    let max = parse_size(s).expect("could not parse");
+
+    if max < 1 {
+        panic!("minimum is 1 for maximum size");
+    }
+
+    Ok(max)
+}
+
+fn parse_scansize_bytes(s: &str) -> Result<u64, Error> {
+    let ss = parse_size(s).expect("could not parse");
+
+    if ss < 1 {
+        panic!("minimum is 1 for scan size");
+    }
+
+    Ok(ss)
 }
 
 // CLI arguments
@@ -61,16 +102,22 @@ fn convert_bytes(bytes: u64, conv: ConvertTo) -> String {
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct CLIArgs {
-    #[clap(short = 'v', long, parse(from_occurrences),
-    help = "Be verbose, -vvv... be very verbose")]
+    #[clap(
+        short = 'v',
+        long,
+        parse(from_occurrences),
+        help = "Be verbose, -vvv... be very verbose"
+    )]
     verbose: u64,
 
-    #[clap(short = 'm', long, default_value = "1",
-    help = "Minimum filesize to scan")]
+    #[clap(short = 'm', long, default_value = "1B",
+    help = "Minimum filesize to scan",
+    parse(try_from_str = parse_min_bytes))]
     minsize: u64,
 
-    #[clap(short = 'M', long, default_value = "0",
-    help = "Maximum filesize to scan (0 = no limit)")]
+    #[clap(short = 'M', long, default_value = "1EiB",
+    help = "Maximum filesize to scan",
+    parse(try_from_str = parse_max_bytes))]
     maxsize: u64,
 
     #[clap(short = 'c', long, default_value = "2",
@@ -78,19 +125,28 @@ struct CLIArgs {
     value_parser = clap::value_parser ! (u64).range(2..))]
     count: u64,
 
-    #[clap(short = 's', long, default_value = "1048576",
+    #[clap(short = 's', long, default_value = "1MiB",
     help = "Scan size used for scanning first and last bytes of file",
-    value_parser = clap::value_parser ! (u64).range(1..))]
+    parse(try_from_str = parse_scansize_bytes))]
     scansize: u64,
 
     #[clap(long, help = "Delete files? If enabled, files are actually deleted")]
     delete_files: bool,
 
-    #[clap(short = 'S', long, value_enum, help = "Sort order", default_value = "i-node")]
+    #[clap(
+        short = 'S',
+        long,
+        value_enum,
+        help = "Sort order",
+        default_value = "i-node"
+    )]
     sort_order: DirSortOrder,
 
-    #[clap(required = true, multiple = true,
-    help = "Path(s) to scan for duplicate files")]
+    #[clap(
+        required = true,
+        multiple = true,
+        help = "Path(s) to scan for duplicate files"
+    )]
     paths: Vec<PathBuf>,
 }
 
@@ -139,12 +195,12 @@ fn cmp_depth(a: &DirEntry, b: &DirEntry) -> Ordering {
 fn main() -> Result<(), io::Error> {
     let args: CLIArgs = CLIArgs::parse();
 
-    if args.maxsize != 0 && args.minsize > args.maxsize {
+    if args.minsize > args.maxsize {
         println!("minsize is larger than maxsize");
         exit(1);
     }
 
-    if args.maxsize != 0 && args.maxsize < args.minsize {
+    if args.maxsize < args.minsize {
         println!("maxsize is smaller than minsize");
         exit(1);
     }
@@ -164,15 +220,16 @@ fn main() -> Result<(), io::Error> {
 
     println!();
 
-    print!("File sizes to scan: {} - ", convert_to_human(args.minsize));
+    println!(
+        "File sizes to scan: {} - {}",
+        convert_to_human(args.minsize),
+        convert_to_human(args.maxsize)
+    );
 
-    if args.maxsize == 0 {
-        println!("no limit");
-    } else {
-        println!("{}", convert_to_human(args.maxsize));
-    }
-
-    println!("Scan size for last and first bytes of files: {}", convert_to_human(args.scansize));
+    println!(
+        "Scan size for last and first bytes of files: {}",
+        convert_to_human(args.scansize)
+    );
 
     println!("Directories to scan:");
     for dir in dirs_to_search.clone() {
@@ -189,36 +246,62 @@ fn main() -> Result<(), io::Error> {
         DirSortOrder::Depth => cmp_depth,
     };
 
-    let mut files_found: HashMap<u64, Vec<PathBuf>> = find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count, cmp)?;
+    let mut files_found: HashMap<u64, Vec<PathBuf>> =
+        find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count, cmp)?;
     let (file_count, total_size) = generate_stats(files_found.to_owned());
-    println!("  File candidates: {} Total size: {}", file_count, convert_to_human(total_size));
+    println!(
+        "  File candidates: {} Total size: {}",
+        file_count,
+        convert_to_human(total_size)
+    );
     if files_found.is_empty() {
         println!("No files.");
         exit(0);
     }
-
 
     // Scan last bytes
-    println!("(2 / 6) Eliminating candidates based on last {} bytes of files...", args.scansize);
-    files_found = eliminate_first_or_last_bytes_hash(files_found.to_owned(), ScanType::Last, args.scansize, args.count)?;
+    println!(
+        "(2 / 6) Eliminating candidates based on last {} bytes of files...",
+        args.scansize
+    );
+    files_found = eliminate_first_or_last_bytes_hash(
+        files_found.to_owned(),
+        ScanType::Last,
+        args.scansize,
+        args.count,
+    )?;
     let (file_count, total_size) = generate_stats(files_found.to_owned());
-    println!("  File candidates: {} Total size: {}", file_count, convert_to_human(total_size));
+    println!(
+        "  File candidates: {} Total size: {}",
+        file_count,
+        convert_to_human(total_size)
+    );
     if files_found.is_empty() {
         println!("No files.");
         exit(0);
     }
-
 
     // Scan first bytes
-    println!("(3 / 6) Eliminating candidates based on first {} bytes of files...", args.scansize);
-    files_found = eliminate_first_or_last_bytes_hash(files_found.to_owned(), ScanType::First, args.scansize, args.count)?;
+    println!(
+        "(3 / 6) Eliminating candidates based on first {} bytes of files...",
+        args.scansize
+    );
+    files_found = eliminate_first_or_last_bytes_hash(
+        files_found.to_owned(),
+        ScanType::First,
+        args.scansize,
+        args.count,
+    )?;
     let (file_count, total_size) = generate_stats(files_found.to_owned());
-    println!("  File candidates: {} Total size: {}", file_count, convert_to_human(total_size));
+    println!(
+        "  File candidates: {} Total size: {}",
+        file_count,
+        convert_to_human(total_size)
+    );
     if files_found.is_empty() {
         println!("No files.");
         exit(0);
     }
-
 
     let mut freed_space: u64 = 0;
     let mut freed_files: u64 = 0;
@@ -234,7 +317,12 @@ fn main() -> Result<(), io::Error> {
         files_remaining -= files.len() as u64;
         space_remaining -= fsize * (files.len() as u64);
 
-        println!("(4 / 6) Hashing {} files with size {}  Total: {}...", files.len(), convert_to_human(fsize), convert_to_human(fsize * (files.len() as u64)));
+        println!(
+            "(4 / 6) Hashing {} files with size {}  Total: {}...",
+            files.len(),
+            convert_to_human(fsize),
+            convert_to_human(fsize * (files.len() as u64))
+        );
         let final_candidates = find_final_candidates(files)?;
 
         for (checksum, files) in final_candidates {
@@ -244,11 +332,17 @@ fn main() -> Result<(), io::Error> {
             }
 
             if (files.len() as u64) < args.count {
-                println!("  There were too few files with same checksum ({})", files.len());
+                println!(
+                    "  There were too few files with same checksum ({})",
+                    files.len()
+                );
                 continue;
             }
 
-            println!("(5 / 6) Deleting duplicate files with checksum: {}", checksum);
+            println!(
+                "(5 / 6) Deleting duplicate files with checksum: {}",
+                checksum
+            );
 
             for (i, file) in files.iter().enumerate() {
                 if i == 0 {
@@ -269,12 +363,21 @@ fn main() -> Result<(), io::Error> {
             }
         }
 
-        println!("Currently removed {} files totaling {}  Remaining: {} files, {}", freed_files, convert_to_human(freed_space), files_remaining, convert_to_human(space_remaining));
+        println!(
+            "Currently removed {} files totaling {}  Remaining: {} files, {}",
+            freed_files,
+            convert_to_human(freed_space),
+            files_remaining,
+            convert_to_human(space_remaining)
+        );
     }
 
-
     println!();
-    println!("(6 / 6) Removed {} files totaling {}", freed_files, convert_to_human(freed_space));
+    println!(
+        "(6 / 6) Removed {} files totaling {}",
+        freed_files,
+        convert_to_human(freed_space)
+    );
 
     Ok(())
 }
