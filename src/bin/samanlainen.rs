@@ -234,7 +234,7 @@ fn main() -> Result<(), io::Error> {
         files_remaining -= files.len() as u64;
         space_remaining -= fsize * (files.len() as u64);
 
-        println!("(4 / 6) Hashing {} files with size {}...", files.len(), convert_to_human(fsize));
+        println!("(4 / 6) Hashing {} files with size {}  Total: {}...", files.len(), convert_to_human(fsize), convert_to_human(fsize * (files.len() as u64)));
         let final_candidates = find_final_candidates(files)?;
 
         for (checksum, files) in final_candidates {
