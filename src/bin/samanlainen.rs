@@ -243,7 +243,7 @@ fn main() -> Result<(), io::Error> {
                 continue;
             }
 
-            if files.len() < args.count as usize {
+            if (files.len() as u64) < args.count {
                 println!("  There were too few files with same checksum ({})", files.len());
                 continue;
             }
