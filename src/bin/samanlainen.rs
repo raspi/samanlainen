@@ -1,12 +1,15 @@
 use std::{cmp, io, iter};
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Error;
 use std::fs::{canonicalize, remove_file};
 use std::path::{Path, PathBuf};
 use std::process::exit;
+use std::str::FromStr;
 
 use clap::{App, Arg, ArgAction};
 use clap::Parser;
+use walkdir::{DirEntry, DirEntryExt};
 use samanlainen_lib::{ScanType, find_final_candidates, eliminate_first_or_last_bytes_hash, generate_stats, find_candidate_files};
 
 #[derive(Clone, Copy)]
@@ -83,6 +86,9 @@ struct CLIArgs {
     #[clap(long, help = "Delete files? If enabled, files are actually deleted")]
     delete_files: bool,
 
+    #[clap(short = 'S', long, value_enum, help = "Sort order", default_value = "i-node")]
+    sort_order: DirSortOrder,
+
     #[clap(required = true, multiple = true,
     help = "Path(s) to scan for duplicate files")]
     paths: Vec<PathBuf>,
@@ -109,6 +115,25 @@ fn get_directories(dirs: Vec<PathBuf>) -> io::Result<Vec<PathBuf>> {
     }
 
     Ok(dirs_to_search)
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum DirSortOrder {
+    INode,
+    Filename,
+    Depth,
+}
+
+fn cmp_inode(a: &DirEntry, b: &DirEntry) -> Ordering {
+    a.ino().cmp(&b.ino())
+}
+
+fn cmp_filename(a: &DirEntry, b: &DirEntry) -> Ordering {
+    a.file_name().cmp(b.file_name())
+}
+
+fn cmp_depth(a: &DirEntry, b: &DirEntry) -> Ordering {
+    a.depth().cmp(&b.depth())
 }
 
 fn main() -> Result<(), io::Error> {
@@ -158,7 +183,13 @@ fn main() -> Result<(), io::Error> {
 
     println!("(1 / 6) Generating file list based on file sizes...");
 
-    let mut files_found: HashMap<u64, Vec<PathBuf>> = find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count)?;
+    let cmp = match args.sort_order {
+        DirSortOrder::INode => cmp_inode,
+        DirSortOrder::Filename => cmp_filename,
+        DirSortOrder::Depth => cmp_depth,
+    };
+
+    let mut files_found: HashMap<u64, Vec<PathBuf>> = find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count, cmp)?;
     let (file_count, total_size) = generate_stats(files_found.to_owned());
     println!("  File candidates: {} Total size: {}", file_count, convert_to_human(total_size));
     if files_found.is_empty() {

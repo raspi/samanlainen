@@ -1,11 +1,12 @@
 use std::{io, iter};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha512};
-use walkdir::{DirEntryExt, WalkDir};
+use walkdir::{DirEntry, DirEntryExt, WalkDir};
 
 // Generate stats from list of files
 pub fn generate_stats(l: HashMap<u64, Vec<PathBuf>>) -> (u64, u64) {
@@ -81,6 +82,7 @@ pub fn find_candidate_files(
     minimum_size: u64, // file size must be at least this
     maximum_size: u64, // file size cannot be larger than this, 0 disables max size
     count: u64, // there must be at least this many files with same file size to be considered a duplicate (must be 2 or more)
+    cmpfn: fn(a: &DirEntry,b: &DirEntry) -> Ordering,
 ) -> io::Result<HashMap<u64, Vec<PathBuf>>> {
     if count < 2 {
         panic!("count < 2")
@@ -95,10 +97,7 @@ pub fn find_candidate_files(
         for entry in WalkDir::new(path)
             .follow_links(false)
             .same_file_system(true)
-            .sort_by(
-                // Older inode first
-                |a, b| a.ino().cmp(&b.ino())
-            )
+            .sort_by(cmpfn)
         {
             let e = entry?;
 
