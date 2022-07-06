@@ -22,7 +22,7 @@ enum ConvertTo {
 
 fn convert_to_human(bytes: u64) -> String {
     if bytes < 1000 {
-        return format!("{} B", bytes)
+        return format!("{} B", bytes);
     }
 
     format!("{} B ({}, {})", bytes,
@@ -228,7 +228,7 @@ fn main() -> Result<(), io::Error> {
     // remove files in file size groups so that collision with different sized files are less likely
     for (fsize, files) in files_found {
         if files.is_empty() {
-            continue
+            continue;
         }
 
         files_remaining -= files.len() as u64;
