@@ -156,10 +156,10 @@ fn main() -> Result<(), io::Error> {
         exit(0);
     }
 
-    if !args.delete_files {
-        println!("Not deleting files (dry run), add --delete-files to actually delete files.");
-    } else {
+    if args.delete_files {
         println!("WARNING: deleting files!");
+    } else {
+        println!("Not deleting files (dry run), add --delete-files to actually delete files.");
     }
 
     println!();
