@@ -1,15 +1,18 @@
-use std::{cmp, io};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::Error;
 use std::fs::{canonicalize, remove_file};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::str::FromStr;
+use std::{cmp, io};
 
-use clap::{App, Arg, ArgAction};
+use atty;
 use clap::Parser;
+use clap::{App, Arg, ArgAction};
 use parse_size::parse_size;
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 use walkdir::{DirEntry, DirEntryExt};
 
 use samanlainen::{
@@ -23,6 +26,12 @@ enum ConvertTo {
     SI,
     // 1024
     IEC,
+}
+
+#[derive(clap::ValueEnum, Clone, Copy, Debug)]
+enum ColorMode {
+    Auto,
+    Off,
 }
 
 fn convert_to_human(bytes: u64) -> String {
@@ -70,7 +79,7 @@ fn convert_bytes(bytes: u64, conv: ConvertTo) -> String {
 fn parse_min_bytes(s: &str) -> Result<u64, String> {
     let min = match parse_size(s) {
         Ok(r) => r,
-        Err(ref e) => return Err(e.to_string())
+        Err(ref e) => return Err(e.to_string()),
     };
 
     if min < 1 {
@@ -83,7 +92,7 @@ fn parse_min_bytes(s: &str) -> Result<u64, String> {
 fn parse_max_bytes(s: &str) -> Result<u64, String> {
     let max = match parse_size(s) {
         Ok(r) => r,
-        Err(ref e) => return Err(e.to_string())
+        Err(ref e) => return Err(e.to_string()),
     };
 
     if max < 1 {
@@ -96,7 +105,7 @@ fn parse_max_bytes(s: &str) -> Result<u64, String> {
 fn parse_scansize_bytes(s: &str) -> Result<u64, String> {
     let ss = match parse_size(s) {
         Ok(r) => r,
-        Err(ref e) => return Err(e.to_string())
+        Err(ref e) => return Err(e.to_string()),
     };
 
     if ss < 1 {
@@ -112,10 +121,10 @@ fn parse_scansize_bytes(s: &str) -> Result<u64, String> {
 #[clap(author, version, about, long_about = None)]
 struct CLIArgs {
     #[clap(
-    short = 'v',
-    long,
-    parse(from_occurrences),
-    help = "Be verbose, -vvv... be very verbose"
+        short = 'v',
+        long,
+        parse(from_occurrences),
+        help = "Be verbose, -vvv... be very verbose"
     )]
     verbose: u64,
 
@@ -143,18 +152,21 @@ struct CLIArgs {
     delete_files: bool,
 
     #[clap(
-    short = 'S',
-    long,
-    value_enum,
-    help = "Sort order",
-    default_value = "i-node"
+        short = 'S',
+        long,
+        value_enum,
+        help = "Sort order",
+        default_value = "i-node"
     )]
     sort_order: DirSortOrder,
 
+    #[clap(short = 'C', long, value_enum, help = "Color", default_value = "auto")]
+    color: ColorMode,
+
     #[clap(
-    required = true,
-    multiple = true,
-    help = "Path(s) to scan for duplicate files"
+        required = true,
+        multiple = true,
+        help = "Path(s) to scan for duplicate files"
     )]
     paths: Vec<PathBuf>,
 }
@@ -167,7 +179,7 @@ fn get_directories(dirs: Vec<PathBuf>) -> Result<Vec<PathBuf>, String> {
         // Convert to absolute path
         let path = match canonicalize(Path::new(&dir)) {
             Ok(r) => r,
-            Err(e) => return Err(format!("{}", e).to_string())
+            Err(e) => return Err(format!("{}", e).to_string()),
         };
 
         if found_dirs.contains(&path.to_path_buf()) {
@@ -207,56 +219,94 @@ fn cmp_depth(a: &DirEntry, b: &DirEntry) -> Ordering {
 fn main() -> Result<(), io::Error> {
     let args: CLIArgs = CLIArgs::parse();
 
+    let color_choice = match args.color {
+        ColorMode::Auto => {
+            if atty::is(atty::Stream::Stdout) {
+                ColorChoice::Auto
+            } else {
+                ColorChoice::Never
+            }
+        }
+        ColorMode::Off => ColorChoice::Never,
+    };
+
+    const STATS_COLOR: Option<Color> = Some(Color::Rgb(160, 160, 160));
+    const DEFAULT_COLOR: Option<Color> = Some(Color::Rgb(240, 240, 240));
+    const ERR_COLOR: Option<Color> = Some(Color::Rgb(255, 0, 0));
+
+    let mut stdout = StandardStream::stdout(color_choice);
+    set_color(&mut stdout, DEFAULT_COLOR);
+
+    let mut stderr = StandardStream::stderr(color_choice);
+    set_color(&mut stderr, ERR_COLOR);
+
     if args.minsize > args.maxsize {
-        println!("minsize is larger than maxsize");
+        writeln!(&mut stderr, "minsize is larger than maxsize").expect("");
         exit(1);
     }
 
     if args.maxsize < args.minsize {
-        println!("maxsize is smaller than minsize");
+        writeln!(&mut stderr, "maxsize is smaller than minsize").expect("");
         exit(1);
     }
 
     let dirs_to_search: Vec<PathBuf> = match get_directories(args.paths) {
         Ok(l) => l,
         Err(e) => {
-            println!("could not parse paths: {}", e);
+            writeln!(&mut stderr, "could not parse paths: {}", e).expect("");
             exit(1);
         }
     };
 
     if dirs_to_search.is_empty() {
-        println!("No directories");
+        writeln!(&mut stderr, "No directories").expect("");
         exit(0);
     }
 
+    set_color(&mut stdout, ERR_COLOR);
+
     if args.delete_files {
-        println!("WARNING: deleting files!");
+        writeln!(&mut stdout, "WARNING: deleting files!").expect("");
     } else {
-        println!("Not deleting files (dry run), add --delete-files to actually delete files.");
+        writeln!(
+            &mut stdout,
+            "Not deleting files (dry run), add --delete-files to actually delete files."
+        )
+        .expect("");
     }
 
-    println!();
+    set_color(&mut stdout, Some(Color::Rgb(128, 128, 0)));
 
-    println!(
+    writeln!(
+        &mut stdout,
         "File sizes to scan: {} - {}",
         convert_to_human(args.minsize),
         convert_to_human(args.maxsize)
-    );
+    )
+    .expect("");
 
-    println!(
+    writeln!(
+        &mut stdout,
         "Scan size for last and first bytes of files: {}",
         convert_to_human(args.scansize)
-    );
+    )
+    .expect("");
 
-    println!("Directories to scan:");
+    writeln!(&mut stdout, "Directories to scan:").expect("");
+    set_color(&mut stdout, Some(Color::Rgb(255, 255, 0)));
     for dir in dirs_to_search.clone() {
-        println!(" * {}", dir.display());
+        writeln!(&mut stdout, " * {}", dir.display()).expect("");
     }
 
-    println!();
+    writeln!(&mut stdout, "").expect("");
 
-    println!("(1 / 6) Generating file list based on file sizes...");
+    set_color(&mut stdout, DEFAULT_COLOR);
+
+    writeln!(
+        &mut stdout,
+        "(1 / 6) Generating file list based on file sizes..."
+    )
+    .expect("");
 
     let cmp = match args.sort_order {
         DirSortOrder::INode => cmp_inode,
@@ -267,21 +317,29 @@ fn main() -> Result<(), io::Error> {
     let mut files_found: HashMap<u64, Vec<PathBuf>> =
         find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count, cmp)?;
     let (file_count, total_size) = generate_stats(files_found.to_owned());
-    println!(
+
+    set_color(&mut stdout, STATS_COLOR);
+    writeln!(
+        &mut stdout,
         "  File candidates: {} Total size: {}",
         file_count,
         convert_to_human(total_size)
-    );
+    )
+    .expect("");
+    set_color(&mut stdout, DEFAULT_COLOR);
+
     if files_found.is_empty() {
-        println!("No files.");
+        writeln!(&mut stdout, "No files.").expect("");
         exit(0);
     }
 
     // Scan last bytes
-    println!(
+    writeln!(
+        &mut stdout,
         "(2 / 6) Eliminating candidates based on last {} bytes of files...",
         args.scansize
-    );
+    )
+    .expect("");
     files_found = eliminate_first_or_last_bytes_hash(
         files_found.to_owned(),
         ScanType::Last,
@@ -289,21 +347,29 @@ fn main() -> Result<(), io::Error> {
         args.count,
     )?;
     let (file_count, total_size) = generate_stats(files_found.to_owned());
-    println!(
+
+    set_color(&mut stdout, STATS_COLOR);
+    writeln!(
+        &mut stdout,
         "  File candidates: {} Total size: {}",
         file_count,
         convert_to_human(total_size)
-    );
+    )
+    .expect("");
+    set_color(&mut stdout, DEFAULT_COLOR);
+
     if files_found.is_empty() {
-        println!("No files.");
+        writeln!(&mut stdout, "No files.").expect("");
         exit(0);
     }
 
     // Scan first bytes
-    println!(
+    writeln!(
+        &mut stdout,
         "(3 / 6) Eliminating candidates based on first {} bytes of files...",
         args.scansize
-    );
+    )
+    .expect("");
     files_found = eliminate_first_or_last_bytes_hash(
         files_found.to_owned(),
         ScanType::First,
@@ -311,13 +377,18 @@ fn main() -> Result<(), io::Error> {
         args.count,
     )?;
     let (file_count, total_size) = generate_stats(files_found.to_owned());
-    println!(
+    set_color(&mut stdout, STATS_COLOR);
+    writeln!(
+        &mut stdout,
         "  File candidates: {} Total size: {}",
         file_count,
         convert_to_human(total_size)
-    );
+    )
+    .expect("");
+    set_color(&mut stdout, DEFAULT_COLOR);
+
     if files_found.is_empty() {
-        println!("No files.");
+        writeln!(&mut stdout, "No files.").expect("");
         exit(0);
     }
 
@@ -335,44 +406,54 @@ fn main() -> Result<(), io::Error> {
         files_remaining -= files.len() as u64;
         space_remaining -= fsize * (files.len() as u64);
 
-        println!(
+        set_color(&mut stdout, DEFAULT_COLOR);
+
+        writeln!(
+            &mut stdout,
             "(4 / 6) Hashing {} files with size {}  Total: {}...",
             files.len(),
             convert_to_human(fsize),
             convert_to_human(fsize * (files.len() as u64))
-        );
+        )
+        .expect("");
         let final_candidates = find_final_candidates(files)?;
 
         for (checksum, files) in final_candidates {
             if files.is_empty() {
-                println!("  There were no files");
+                writeln!(&mut stdout, "  There were no files").expect("");
                 continue;
             }
 
             if (files.len() as u64) < args.count {
-                println!(
+                writeln!(
+                    &mut stdout,
                     "  There were too few files with same checksum ({})",
                     files.len()
-                );
+                )
+                .expect("");
                 continue;
             }
 
-            println!(
+            writeln!(
+                &mut stdout,
                 "(5 / 6) Deleting duplicate files with checksum: {}",
                 checksum
-            );
+            )
+            .expect("");
 
             for (i, file) in files.iter().enumerate() {
                 if i == 0 {
                     // Keep first
-                    println!("   +keeping: {}", file.display());
+                    set_color(&mut stdout, Some(Color::Rgb(0, 240, 0)));
+                    writeln!(&mut stdout, "   +keeping: {}", file.display()).expect("");
                     continue;
                 }
 
                 freed_space += fsize;
                 freed_files += 1;
 
-                println!("  -deleting: {}", file.display());
+                set_color(&mut stdout, Some(Color::Rgb(240, 0, 0)));
+                writeln!(&mut stdout, "  -deleting: {}", file.display()).expect("");
 
                 if args.delete_files {
                     // actually delete file
@@ -381,21 +462,33 @@ fn main() -> Result<(), io::Error> {
             }
         }
 
-        println!(
+        set_color(&mut stdout, STATS_COLOR);
+        writeln!(
+            &mut stdout,
             "Currently removed {} files totaling {}  Remaining: {} files, {}",
             freed_files,
             convert_to_human(freed_space),
             files_remaining,
             convert_to_human(space_remaining)
-        );
+        )
+        .expect("");
     }
 
-    println!();
-    println!(
+    set_color(&mut stdout, DEFAULT_COLOR);
+
+    writeln!(
+        &mut stdout,
         "(6 / 6) Removed {} files totaling {}",
         freed_files,
         convert_to_human(freed_space)
-    );
+    )
+    .expect("");
 
     Ok(())
+}
+
+fn set_color(target: &mut StandardStream, color: Option<Color>) {
+    target
+        .set_color(ColorSpec::new().set_fg(color))
+        .expect("couldn't set color");
 }

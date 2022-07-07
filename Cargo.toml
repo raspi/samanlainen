@@ -2,7 +2,7 @@
 
 [package]
 name = "samanlainen"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 homepage = "https://github.com/raspi/samanlainen"
 authors = ["Pekka Järvinen"]
@@ -13,6 +13,8 @@ walkdir = "2"
 clap = { version = "3.2.8", features = ["derive"] }
 sha2 = "0.10.2"
 parse-size = "1.0.0"
+atty = "0.2.14"
+termcolor = "1.1.3"
 
 [lib]
 name = "samanlainen"
