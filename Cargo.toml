@@ -1,3 +1,5 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [package]
 name = "samanlainen"
 version = "0.1.0"
@@ -6,8 +8,6 @@ homepage = "https://github.com/raspi/samanlainen"
 authors = ["Pekka Järvinen"]
 description = "Delete duplicate files. Uses SHA512."
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 walkdir = "2"
 clap = { version = "3.2.8", features = ["derive"] }
@@ -15,7 +15,7 @@ sha2 = "0.10.2"
 parse-size = "1.0.0"
 
 [lib]
-name = "samanlainen_lib"
+name = "samanlainen"
 path = "src/lib.rs"
 
 [[bin]]

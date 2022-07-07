@@ -12,7 +12,7 @@ use clap::Parser;
 use parse_size::parse_size;
 use walkdir::{DirEntry, DirEntryExt};
 
-use samanlainen_lib::{
+use samanlainen::{
     eliminate_first_or_last_bytes_hash, find_candidate_files, find_final_candidates,
     generate_stats, ScanType,
 };
