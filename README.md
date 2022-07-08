@@ -9,7 +9,7 @@ Delete duplicate files. Uses SHA512. Rewritten from [duplikaatti](https://github
 ## Usage
 
 ```
-% target/x86_64-unknown-linux-gnu/release/samanlainen --help
+% samanlainen --help
 samanlainen 0.2.1
 Pekka Järvinen
 Delete duplicate files. Uses SHA512.
