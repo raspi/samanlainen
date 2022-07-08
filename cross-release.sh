@@ -15,19 +15,22 @@ done
 
 for t in $ARCHS
 do
-  cp LICENSE target/$t/release
-  cp README.md target/$t/release
+  cp LICENSE "target/$t/release"
+  cp README.md "target/$t/release"
 done
 
-mkdir release
+# Get version from compiled release
+VERSION=$(target/x86_64-unknown-linux-gnu/release/samanlainen --version | cut -d' ' -f2)
+
+mkdir "release/v$VERSION"
 
 for t in $ARCHS
 do
   pushd "target/$t/release" || return
-  tar --numeric-owner --owner=0 --group=0 -zcvf ../../../release/samanlainen-$t.tar.gz LICENSE README.md samanlainen
+  tar --numeric-owner --owner=0 --group=0 -zcvf "../../../release/v$VERSION/samanlainen-v$VERSION-$t.tar.gz" LICENSE README.md samanlainen
   popd || return
 done
 
-pushd release || return
+pushd "release/v$VERSION" || return
 sha256sum *.tar.gz > checksums.sha256
 popd || return
