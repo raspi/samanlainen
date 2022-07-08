@@ -4,5 +4,4 @@ Cargo.lock
 **/*.rs.bk
 
 # Release
-release/*.tar.gz
-release/checksums.*
+release/v*/*
