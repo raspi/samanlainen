@@ -9,7 +9,8 @@ Delete duplicate files. Uses SHA512. Rewritten from [duplikaatti](https://github
 ## Usage
 
 ```
-samanlainen 0.2.0
+% target/x86_64-unknown-linux-gnu/release/samanlainen --help
+samanlainen 0.2.1
 Pekka Järvinen
 Delete duplicate files. Uses SHA512.
 
@@ -25,10 +26,10 @@ OPTIONS:
     -C, --color <COLOR>              Color [default: auto] [possible values: auto, off]
         --delete-files               Delete files? If enabled, files are actually deleted
     -h, --help                       Print help information
-    -m, --minsize <MINSIZE>          Minimum filesize to scan [default: 1B]
-    -M, --maxsize <MAXSIZE>          Maximum filesize to scan [default: 1EiB]
-    -s, --scansize <SCANSIZE>        Scan size used for scanning first and last bytes of file
-                                     [default: 1MiB]
+    -m, --minsize <MINSIZE>          Minimum filesize to scan, supports EIC/SI units [default: 1B]
+    -M, --maxsize <MAXSIZE>          Maximum filesize to scan, supports EIC/SI units [default: 1EiB]
+    -s, --scansize <SCANSIZE>        Scan size used for scanning first and last bytes of file,
+                                     supports EIC/SI units [default: 1MiB]
     -S, --sort-order <SORT_ORDER>    Sort order [default: i-node] [possible values: i-node,
                                      filename, depth]
     -v, --verbose                    Be verbose, -vvv... be very verbose
