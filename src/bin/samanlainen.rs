@@ -129,12 +129,12 @@ struct CLIArgs {
     verbose: u64,
 
     #[clap(short = 'm', long, default_value = "1B",
-    help = "Minimum filesize to scan",
+    help = "Minimum filesize to scan, supports EIC/SI units",
     parse(try_from_str = parse_min_bytes))]
     minsize: u64,
 
     #[clap(short = 'M', long, default_value = "1EiB",
-    help = "Maximum filesize to scan",
+    help = "Maximum filesize to scan, supports EIC/SI units",
     parse(try_from_str = parse_max_bytes))]
     maxsize: u64,
 
@@ -144,7 +144,7 @@ struct CLIArgs {
     count: u64,
 
     #[clap(short = 's', long, default_value = "1MiB",
-    help = "Scan size used for scanning first and last bytes of file",
+    help = "Scan size used for scanning first and last bytes of file, supports EIC/SI units",
     parse(try_from_str = parse_scansize_bytes))]
     scansize: u64,
 
