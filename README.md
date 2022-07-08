@@ -9,7 +9,7 @@ Delete duplicate files. Uses SHA512. Rewritten from [duplikaatti](https://github
 ## Usage
 
 ```
-samanlainen 0.1.0
+samanlainen 0.2.0
 Pekka Järvinen
 Delete duplicate files. Uses SHA512.
 
@@ -20,15 +20,19 @@ ARGS:
     <PATHS>...    Path(s) to scan for duplicate files
 
 OPTIONS:
-    -c, --count <COUNT>          Minimum count of files considered duplicate (min. 2) [default: 2]
-        --delete-files           Delete files? If enabled, files are actually deleted
-    -h, --help                   Print help information
-    -m, --minsize <MINSIZE>      Minimum filesize to scan [default: 1]
-    -M, --maxsize <MAXSIZE>      Maximum filesize to scan (0 = no limit) [default: 0]
-    -s, --scansize <SCANSIZE>    Scan size used for scanning first and last bytes of file [default:
-                                 1048576]
-    -v, --verbose                Be verbose, -vvv... be very verbose
-    -V, --version                Print version information
+    -c, --count <COUNT>              Minimum count of files considered duplicate (min. 2) [default:
+                                     2]
+    -C, --color <COLOR>              Color [default: auto] [possible values: auto, off]
+        --delete-files               Delete files? If enabled, files are actually deleted
+    -h, --help                       Print help information
+    -m, --minsize <MINSIZE>          Minimum filesize to scan [default: 1B]
+    -M, --maxsize <MAXSIZE>          Maximum filesize to scan [default: 1EiB]
+    -s, --scansize <SCANSIZE>        Scan size used for scanning first and last bytes of file
+                                     [default: 1MiB]
+    -S, --sort-order <SORT_ORDER>    Sort order [default: i-node] [possible values: i-node,
+                                     filename, depth]
+    -v, --verbose                    Be verbose, -vvv... be very verbose
+    -V, --version                    Print version information
 ```
 
 ## Example run
@@ -42,13 +46,17 @@ drwxr-xr-x 7 raspi raspi 4096  2. 7. 23:57 ..
 -rw-r--r-- 1 raspi raspi 1000  2. 7. 02:36 random_copy.dat
 -rw-r--r-- 1 raspi raspi 1000  2. 7. 02:36 random.dat
 
+% sha1sum test/*
+105af7b371b01ee4bbb2dc7242b001dd61b07a26  test/random_copy2.dat
+105af7b371b01ee4bbb2dc7242b001dd61b07a26  test/random_copy.dat
+105af7b371b01ee4bbb2dc7242b001dd61b07a26  test/random.dat
+
 % samanlainen test
 Not deleting files (dry run), add --delete-files to actually delete files.
-
-File sizes to scan: 1 B - no limit
-Scan size: 1048576 B (1.05 MB, 1 MiB)
+File sizes to scan: 1 B - 1152921504606846976 B (1.15 EB, 1 EiB)
+Scan size for last and first bytes of files: 1048576 B (1.05 MB, 1 MiB)
 Directories to scan:
-  /home/raspi/samanlainen/test
+ * /home/raspi/samanlainen/test
 
 (1 / 6) Generating file list based on file sizes...
   File candidates: 3 Total size: 3000 B (3 kB, 2.93 kiB)
@@ -56,16 +64,14 @@ Directories to scan:
   File candidates: 3 Total size: 3000 B (3 kB, 2.93 kiB)
 (3 / 6) Eliminating candidates based on first 1048576 bytes of files...
   File candidates: 3 Total size: 3000 B (3 kB, 2.93 kiB)
-(4 / 6) Hashing 3 files with size 1000 B (1 kB, 1000 B)...
+(4 / 6) Hashing 3 files with size 1000 B (1 kB, 1000 B)  Total: 3000 B (3 kB, 2.93 kiB)...
 (5 / 6) Deleting duplicate files with checksum: 2a890a868d62a5c06a6354e023e6bf44016c963d376b2a736351348d5588f762f7199871d6a7ac09f01452846cbc45e63bd791bb30d483226203fa45f91bdca3
    +keeping: /home/raspi/samanlainen/test/random.dat
   -deleting: /home/raspi/samanlainen/test/random_copy.dat
   -deleting: /home/raspi/samanlainen/test/random_copy2.dat
-Currently removed 2 files totaling 2000 B (2 kB, 1.95 kiB)
-
+Currently removed 2 files totaling 2000 B (2 kB, 1.95 kiB)  Remaining: 0 files, 0 B
 (6 / 6) Removed 2 files totaling 2000 B (2 kB, 1.95 kiB)
 ```
-
 
 ## Algorithm
 
