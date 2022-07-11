@@ -336,8 +336,9 @@ fn main() -> Result<(), io::Error> {
     // Scan last bytes
     writeln!(
         &mut stdout,
-        "(2 / 6) Eliminating candidates based on last {} bytes of files...",
-        args.scansize
+        "(2 / 6) Eliminating candidates based on last {} bytes of files  Total scan: {}...",
+        convert_to_human(args.scansize),
+        convert_to_human(file_count * args.scansize),
     )
     .expect("");
     files_found = eliminate_first_or_last_bytes_hash(
@@ -366,8 +367,9 @@ fn main() -> Result<(), io::Error> {
     // Scan first bytes
     writeln!(
         &mut stdout,
-        "(3 / 6) Eliminating candidates based on first {} bytes of files...",
-        args.scansize
+        "(3 / 6) Eliminating candidates based on first {} bytes of files  Total scan: {}...",
+        convert_to_human(args.scansize),
+        convert_to_human(file_count * args.scansize),
     )
     .expect("");
     files_found = eliminate_first_or_last_bytes_hash(
