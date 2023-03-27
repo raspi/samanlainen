@@ -10,7 +10,7 @@ description = "Delete duplicate files. Uses SHA512."
 
 [dependencies]
 walkdir = "2"
-clap = { version = "3.2.8", features = ["derive"] }
+clap = { version = "4.1.13", features = ["derive"] }
 sha2 = "0.10.2"
 parse-size = "1.0.0"
 atty = "0.2.14"

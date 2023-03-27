@@ -1,19 +1,15 @@
-use std::cmp::Ordering;
+use std::{cmp, io};
 use std::collections::HashMap;
-use std::fmt::Error;
 use std::fs::{canonicalize, remove_file};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use std::str::FromStr;
-use std::{cmp, io};
 
 use atty;
+use clap::error::ErrorKind;
 use clap::Parser;
-use clap::{App, Arg, ArgAction};
 use parse_size::parse_size;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-use walkdir::{DirEntry, DirEntryExt};
 
 use samanlainen::{
     eliminate_first_or_last_bytes_hash, find_candidate_files, find_final_candidates,
@@ -76,40 +72,40 @@ fn convert_bytes(bytes: u64, conv: ConvertTo) -> String {
     format!("{} {}", pretty_bytes, units[exponent as usize])
 }
 
-fn parse_min_bytes(s: &str) -> Result<u64, String> {
-    let min = match parse_size(s) {
+fn parse_min_bytes(s: &str) -> Result<u64, clap::Error> {
+    let min: u64 = match parse_size(s) {
         Ok(r) => r,
-        Err(ref e) => return Err(e.to_string()),
+        Err(ref e) => return Err(clap::Error::raw(ErrorKind::InvalidValue, "invalid value")),
     };
 
     if min < 1 {
-        return Err("minimum is 1 for minimum size".to_string());
+        return Err(clap::Error::raw(ErrorKind::ValueValidation, "minimum is 1 for minimum size"));
     }
 
     Ok(min)
 }
 
-fn parse_max_bytes(s: &str) -> Result<u64, String> {
-    let max = match parse_size(s) {
+fn parse_max_bytes(s: &str) -> Result<u64, clap::Error> {
+    let max: u64 = match parse_size(s) {
         Ok(r) => r,
-        Err(ref e) => return Err(e.to_string()),
+        Err(ref e) => return Err(clap::Error::raw(ErrorKind::InvalidValue, "invalid value")),
     };
 
     if max < 1 {
-        return Err("minimum is 1 for maximum size".to_string());
+        return Err(clap::Error::raw(ErrorKind::ValueValidation, "minimum is 1 for maximum size"));
     }
 
     Ok(max)
 }
 
-fn parse_scansize_bytes(s: &str) -> Result<u64, String> {
+fn parse_scansize_bytes(s: &str) -> Result<u64, clap::Error> {
     let ss = match parse_size(s) {
         Ok(r) => r,
-        Err(ref e) => return Err(e.to_string()),
+        Err(ref e) => return Err(clap::Error::raw(ErrorKind::InvalidValue, "invalid value")),
     };
 
     if ss < 1 {
-        return Err("minimum is 1 for scan size".to_string());
+        return Err(clap::Error::raw(ErrorKind::ValueValidation, "minimum is 1 for scan size"));
     }
 
     Ok(ss)
@@ -120,22 +116,14 @@ fn parse_scansize_bytes(s: &str) -> Result<u64, String> {
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct CLIArgs {
-    #[clap(
-        short = 'v',
-        long,
-        parse(from_occurrences),
-        help = "Be verbose, -vvv... be very verbose"
-    )]
-    verbose: u64,
-
     #[clap(short = 'm', long, default_value = "1B",
     help = "Minimum filesize to scan, supports EIC/SI units",
-    parse(try_from_str = parse_min_bytes))]
+    value_parser = parse_min_bytes)]
     minsize: u64,
 
     #[clap(short = 'M', long, default_value = "1EiB",
     help = "Maximum filesize to scan, supports EIC/SI units",
-    parse(try_from_str = parse_max_bytes))]
+    value_parser = parse_max_bytes)]
     maxsize: u64,
 
     #[clap(short = 'c', long, default_value = "2",
@@ -145,29 +133,18 @@ struct CLIArgs {
 
     #[clap(short = 's', long, default_value = "1MiB",
     help = "Scan size used for scanning first and last bytes of file, supports EIC/SI units",
-    parse(try_from_str = parse_scansize_bytes))]
+    value_parser = parse_scansize_bytes)]
     scansize: u64,
 
     #[clap(long, help = "Delete files? If enabled, files are actually deleted")]
     delete_files: bool,
 
-    #[clap(
-        short = 'S',
-        long,
-        value_enum,
-        help = "Sort order",
-        default_value = "i-node"
-    )]
-    sort_order: DirSortOrder,
-
     #[clap(short = 'C', long, value_enum, help = "Color", default_value = "auto")]
     color: ColorMode,
 
     #[clap(
-        required = true,
-        multiple = true,
-        help = "Path(s) to scan for duplicate files"
-    )]
+    help = "Path(s) to scan for duplicate files",
+    required = true)]
     paths: Vec<PathBuf>,
 }
 
@@ -202,18 +179,6 @@ enum DirSortOrder {
     INode,
     Filename,
     Depth,
-}
-
-fn cmp_inode(a: &DirEntry, b: &DirEntry) -> Ordering {
-    a.ino().cmp(&b.ino())
-}
-
-fn cmp_filename(a: &DirEntry, b: &DirEntry) -> Ordering {
-    a.file_name().cmp(b.file_name())
-}
-
-fn cmp_depth(a: &DirEntry, b: &DirEntry) -> Ordering {
-    a.depth().cmp(&b.depth())
 }
 
 fn main() -> Result<(), io::Error> {
@@ -272,7 +237,7 @@ fn main() -> Result<(), io::Error> {
             &mut stdout,
             "Not deleting files (dry run), add --delete-files to actually delete files."
         )
-        .expect("");
+            .expect("");
     }
 
     set_color(&mut stdout, Some(Color::Rgb(128, 128, 0)));
@@ -283,14 +248,14 @@ fn main() -> Result<(), io::Error> {
         convert_to_human(args.minsize),
         convert_to_human(args.maxsize)
     )
-    .expect("");
+        .expect("");
 
     writeln!(
         &mut stdout,
         "Scan size for last and first bytes of files: {}",
         convert_to_human(args.scansize)
     )
-    .expect("");
+        .expect("");
 
     writeln!(&mut stdout, "Directories to scan:").expect("");
     set_color(&mut stdout, Some(Color::Rgb(255, 255, 0)));
@@ -306,16 +271,10 @@ fn main() -> Result<(), io::Error> {
         &mut stdout,
         "(1 / 6) Generating file list based on file sizes..."
     )
-    .expect("");
-
-    let cmp = match args.sort_order {
-        DirSortOrder::INode => cmp_inode,
-        DirSortOrder::Filename => cmp_filename,
-        DirSortOrder::Depth => cmp_depth,
-    };
+        .expect("");
 
     let mut files_found: HashMap<u64, Vec<PathBuf>> =
-        find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count, cmp)?;
+        find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count)?;
     let (file_count, total_size) = generate_stats(files_found.to_owned());
 
     set_color(&mut stdout, STATS_COLOR);
@@ -325,7 +284,7 @@ fn main() -> Result<(), io::Error> {
         file_count,
         convert_to_human(total_size)
     )
-    .expect("");
+        .expect("");
     set_color(&mut stdout, DEFAULT_COLOR);
 
     if files_found.is_empty() {
@@ -340,7 +299,7 @@ fn main() -> Result<(), io::Error> {
         convert_to_human(args.scansize),
         convert_to_human(file_count * args.scansize),
     )
-    .expect("");
+        .expect("");
     files_found = eliminate_first_or_last_bytes_hash(
         files_found.to_owned(),
         ScanType::Last,
@@ -356,7 +315,7 @@ fn main() -> Result<(), io::Error> {
         file_count,
         convert_to_human(total_size)
     )
-    .expect("");
+        .expect("");
     set_color(&mut stdout, DEFAULT_COLOR);
 
     if files_found.is_empty() {
@@ -371,7 +330,7 @@ fn main() -> Result<(), io::Error> {
         convert_to_human(args.scansize),
         convert_to_human(file_count * args.scansize),
     )
-    .expect("");
+        .expect("");
     files_found = eliminate_first_or_last_bytes_hash(
         files_found.to_owned(),
         ScanType::First,
@@ -386,7 +345,7 @@ fn main() -> Result<(), io::Error> {
         file_count,
         convert_to_human(total_size)
     )
-    .expect("");
+        .expect("");
     set_color(&mut stdout, DEFAULT_COLOR);
 
     if files_found.is_empty() {
@@ -417,7 +376,7 @@ fn main() -> Result<(), io::Error> {
             convert_to_human(fsize),
             convert_to_human(fsize * (files.len() as u64))
         )
-        .expect("");
+            .expect("");
         let final_candidates = find_final_candidates(files)?;
 
         for (checksum, files) in final_candidates {
@@ -432,7 +391,7 @@ fn main() -> Result<(), io::Error> {
                     "  There were too few files with same checksum ({})",
                     files.len()
                 )
-                .expect("");
+                    .expect("");
                 continue;
             }
 
@@ -441,7 +400,7 @@ fn main() -> Result<(), io::Error> {
                 "(5 / 6) Deleting duplicate files with checksum: {}",
                 checksum
             )
-            .expect("");
+                .expect("");
 
             for (i, file) in files.iter().enumerate() {
                 if i == 0 {
@@ -473,7 +432,7 @@ fn main() -> Result<(), io::Error> {
             files_remaining,
             convert_to_human(space_remaining)
         )
-        .expect("");
+            .expect("");
     }
 
     set_color(&mut stdout, DEFAULT_COLOR);
@@ -484,7 +443,7 @@ fn main() -> Result<(), io::Error> {
         freed_files,
         convert_to_human(freed_space)
     )
-    .expect("");
+        .expect("");
 
     Ok(())
 }
