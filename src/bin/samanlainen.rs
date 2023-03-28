@@ -43,6 +43,7 @@ fn convert_to_human(bytes: u64) -> String {
     )
 }
 
+// convert bytes to human readable format
 fn convert_bytes(bytes: u64, conv: ConvertTo) -> String {
     let num: f64 = bytes as f64;
 
@@ -143,7 +144,7 @@ struct CLIArgs {
     color: ColorMode,
 
     #[clap(
-    help = "Path(s) to scan for duplicate files",
+    help = "Path(s) to scan for duplicate files. Directories listed first will have higher priority to be kept",
     required = true)]
     paths: Vec<PathBuf>,
 }
