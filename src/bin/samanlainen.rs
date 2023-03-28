@@ -174,13 +174,6 @@ fn get_directories(dirs: Vec<PathBuf>) -> Result<Vec<PathBuf>, String> {
     Ok(dirs_to_search)
 }
 
-#[derive(clap::ValueEnum, Clone, Debug)]
-enum DirSortOrder {
-    INode,
-    Filename,
-    Depth,
-}
-
 fn main() -> Result<(), io::Error> {
     let args: CLIArgs = CLIArgs::parse();
 
@@ -236,8 +229,7 @@ fn main() -> Result<(), io::Error> {
         writeln!(
             &mut stdout,
             "Not deleting files (dry run), add --delete-files to actually delete files."
-        )
-            .expect("");
+        ).expect("");
     }
 
     set_color(&mut stdout, Some(Color::Rgb(128, 128, 0)));
@@ -247,15 +239,13 @@ fn main() -> Result<(), io::Error> {
         "File sizes to scan: {} - {}",
         convert_to_human(args.minsize),
         convert_to_human(args.maxsize)
-    )
-        .expect("");
+    ).expect("");
 
     writeln!(
         &mut stdout,
         "Scan size for last and first bytes of files: {}",
         convert_to_human(args.scansize)
-    )
-        .expect("");
+    ).expect("");
 
     writeln!(&mut stdout, "Directories to scan:").expect("");
     set_color(&mut stdout, Some(Color::Rgb(255, 255, 0)));
@@ -270,8 +260,7 @@ fn main() -> Result<(), io::Error> {
     writeln!(
         &mut stdout,
         "(1 / 6) Generating file list based on file sizes..."
-    )
-        .expect("");
+    ).expect("");
 
     let mut files_found: HashMap<u64, Vec<PathBuf>> =
         find_candidate_files(dirs_to_search, args.minsize, args.maxsize, args.count)?;
@@ -283,8 +272,7 @@ fn main() -> Result<(), io::Error> {
         "  File candidates: {} Total size: {}",
         file_count,
         convert_to_human(total_size)
-    )
-        .expect("");
+    ).expect("");
     set_color(&mut stdout, DEFAULT_COLOR);
 
     if files_found.is_empty() {
@@ -298,8 +286,8 @@ fn main() -> Result<(), io::Error> {
         "(2 / 6) Eliminating candidates based on last {} bytes of files  Total scan: {}...",
         convert_to_human(args.scansize),
         convert_to_human(file_count * args.scansize),
-    )
-        .expect("");
+    ).expect("");
+
     files_found = eliminate_first_or_last_bytes_hash(
         files_found.to_owned(),
         ScanType::Last,
@@ -314,8 +302,8 @@ fn main() -> Result<(), io::Error> {
         "  File candidates: {} Total size: {}",
         file_count,
         convert_to_human(total_size)
-    )
-        .expect("");
+    ).expect("");
+
     set_color(&mut stdout, DEFAULT_COLOR);
 
     if files_found.is_empty() {
@@ -329,14 +317,15 @@ fn main() -> Result<(), io::Error> {
         "(3 / 6) Eliminating candidates based on first {} bytes of files  Total scan: {}...",
         convert_to_human(args.scansize),
         convert_to_human(file_count * args.scansize),
-    )
-        .expect("");
+    ).expect("");
+
     files_found = eliminate_first_or_last_bytes_hash(
         files_found.to_owned(),
         ScanType::First,
         args.scansize,
         args.count,
     )?;
+
     let (file_count, total_size) = generate_stats(files_found.to_owned());
     set_color(&mut stdout, STATS_COLOR);
     writeln!(
@@ -344,8 +333,7 @@ fn main() -> Result<(), io::Error> {
         "  File candidates: {} Total size: {}",
         file_count,
         convert_to_human(total_size)
-    )
-        .expect("");
+    ).expect("");
     set_color(&mut stdout, DEFAULT_COLOR);
 
     if files_found.is_empty() {
@@ -431,8 +419,7 @@ fn main() -> Result<(), io::Error> {
             convert_to_human(freed_space),
             files_remaining,
             convert_to_human(space_remaining)
-        )
-            .expect("");
+        ).expect("");
     }
 
     set_color(&mut stdout, DEFAULT_COLOR);
@@ -442,8 +429,7 @@ fn main() -> Result<(), io::Error> {
         "(6 / 6) Removed {} files totaling {}",
         freed_files,
         convert_to_human(freed_space)
-    )
-        .expect("");
+    ).expect("");
 
     Ok(())
 }

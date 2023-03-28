@@ -2,7 +2,8 @@ use std::{io, iter};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::fmt::{Write};
 
 use sha2::{Digest, Sha512};
 use walkdir::{DirEntryExt, WalkDir};
@@ -173,10 +174,10 @@ pub enum ScanType {
 }
 
 fn checksum_to_hex(bytes: &[u8]) -> String {
-    let mut s: String = String::new();
+    let mut s = String::with_capacity(bytes.len() * 2);
 
-    for b in bytes {
-        s.push_str(format!("{:02x}", b).as_str());
+    for &b in bytes {
+        write!(&mut s, "{:02x}", b).unwrap();
     }
 
     s
@@ -287,7 +288,7 @@ fn test_integration() -> io::Result<()> {
     for (fsize, files) in cf {
         let final_candidates = find_final_candidates(files)?;
 
-        for (checksum, files) in final_candidates {
+        for (_, files) in final_candidates {
             for file in files {
                 println!("{}", file.display())
             }
