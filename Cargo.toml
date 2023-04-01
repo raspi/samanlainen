@@ -8,6 +8,13 @@ homepage = "https://github.com/raspi/samanlainen"
 authors = ["Pekka Järvinen"]
 description = "Delete duplicate files. Uses SHA512."
 
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
+#panic = "abort"
+
 [dependencies]
 walkdir = "2"
 clap = { version = "4.1.13", features = ["derive"] }
